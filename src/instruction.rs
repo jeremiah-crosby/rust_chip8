@@ -4,6 +4,7 @@ use snafu::Snafu;
 #[derive(Debug, PartialEq)]
 pub enum Instruction {
     CLS,
+    RET,
 }
 
 #[derive(Debug, Snafu)]
@@ -15,6 +16,7 @@ pub enum InstructionError {
 pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
     match encoded_instr {
         0x00E0 => Ok(Instruction::CLS),
+        0x00EE => Ok(Instruction::RET),
         _ => Err(InstructionError::BadInstruction),
     }
 }
@@ -27,5 +29,11 @@ mod tests {
     fn decode_cls() {
         let decoded = decode(0x00E0);
         assert_eq!(decoded.unwrap(), Instruction::CLS);
+    }
+
+    #[test]
+    fn decode_ret() {
+        let decoded = decode(0x00EE);
+        assert_eq!(decoded.unwrap(), Instruction::RET);
     }
 }
