@@ -14,9 +14,16 @@ pub enum InstructionError {
 }
 
 pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
-    match encoded_instr {
-        0x00E0 => Ok(Instruction::CLS),
-        0x00EE => Ok(Instruction::RET),
+    let opcode = encoded_instr & 0xf000;
+    match opcode {
+        0x0000 => {
+            let subop = encoded_instr & 0xff;
+            match subop {
+                0xE0 => Ok(Instruction::CLS),
+                0xEE => Ok(Instruction::RET),
+                _ => Err(InstructionError::BadInstruction),
+            }
+        }
         _ => Err(InstructionError::BadInstruction),
     }
 }
