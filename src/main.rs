@@ -1,3 +1,5 @@
+mod vm;
+
 fn main() {
-    println!("Hello, world!");
+    let vm = vm::VirtualMachine::new();
 }
