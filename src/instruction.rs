@@ -5,6 +5,7 @@ use snafu::Snafu;
 pub enum Instruction {
     CLS,
     RET,
+    JP { location: Word },
 }
 
 #[derive(Debug, Snafu)]
@@ -24,6 +25,9 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
                 _ => Err(InstructionError::BadInstruction),
             }
         }
+        0x1000 => Ok(Instruction::JP {
+            location: encoded_instr & 0xfff,
+        }),
         _ => Err(InstructionError::BadInstruction),
     }
 }
@@ -42,5 +46,11 @@ mod tests {
     fn decode_ret() {
         let decoded = decode(0x00EE);
         assert_eq!(decoded.unwrap(), Instruction::RET);
+    }
+
+    #[test]
+    fn decode_jp() {
+        let decoded = decode(0x1765);
+        assert_eq!(decoded.unwrap(), Instruction::JP { location: 0x765 });
     }
 }
