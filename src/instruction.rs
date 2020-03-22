@@ -3,6 +3,7 @@ use snafu::Snafu;
 
 #[derive(Debug, PartialEq)]
 pub enum Instruction {
+    SYS,
     CLS,
     RET,
     JP { location: Word },
@@ -22,7 +23,7 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             match subop {
                 0xE0 => Ok(Instruction::CLS),
                 0xEE => Ok(Instruction::RET),
-                _ => Err(InstructionError::BadInstruction),
+                _ => Ok(Instruction::SYS),
             }
         }
         0x1000 => Ok(Instruction::JP {
@@ -35,6 +36,12 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn decode_sys() {
+        let decoded = decode(0x0678);
+        assert_eq!(decoded.unwrap(), Instruction::SYS)
+    }
 
     #[test]
     fn decode_cls() {
