@@ -6,7 +6,8 @@ pub enum Instruction {
     SYS,
     CLS,
     RET,
-    JP { location: Word },
+    JP { address: Word },
+    CALL { address: Word },
 }
 
 #[derive(Debug, Snafu)]
@@ -27,7 +28,10 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             }
         }
         0x1000 => Ok(Instruction::JP {
-            location: encoded_instr & 0xfff,
+            address: encoded_instr & 0xfff,
+        }),
+        0x2000 => Ok(Instruction::CALL {
+            address: encoded_instr & 0xfff,
         }),
         _ => Err(InstructionError::BadInstruction),
     }
@@ -58,6 +62,12 @@ mod tests {
     #[test]
     fn decode_jp() {
         let decoded = decode(0x1765);
-        assert_eq!(decoded.unwrap(), Instruction::JP { location: 0x765 });
+        assert_eq!(decoded.unwrap(), Instruction::JP { address: 0x765 });
+    }
+
+    #[test]
+    fn decode_call() {
+        let decoded = decode(0x2765);
+        assert_eq!(decoded.unwrap(), Instruction::CALL { address: 0x765 });
     }
 }
