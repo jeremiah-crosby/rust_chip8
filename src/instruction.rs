@@ -1,4 +1,5 @@
 use crate::types::*;
+use crate::util::*;
 use snafu::Snafu;
 
 #[derive(Debug, PartialEq)]
@@ -8,6 +9,7 @@ pub enum Instruction {
     RET,
     JP { address: Word },
     CALL { address: Word },
+    SE_VX_BYTE { byte: Byte },
 }
 
 #[derive(Debug, Snafu)]
@@ -28,10 +30,13 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             }
         }
         0x1000 => Ok(Instruction::JP {
-            address: encoded_instr & 0xfff,
+            address: low_12(encoded_instr),
         }),
         0x2000 => Ok(Instruction::CALL {
-            address: encoded_instr & 0xfff,
+            address: low_12(encoded_instr),
+        }),
+        0x3000 => Ok(Instruction::SE_VX_BYTE {
+            byte: low_byte(encoded_instr),
         }),
         _ => Err(InstructionError::BadInstruction),
     }
@@ -69,5 +74,11 @@ mod tests {
     fn decode_call() {
         let decoded = decode(0x2765);
         assert_eq!(decoded.unwrap(), Instruction::CALL { address: 0x765 });
+    }
+
+    #[test]
+    fn decode_se_vx_byte() {
+        let decoded = decode(0x3056);
+        assert_eq!(decoded.unwrap(), Instruction::SE_VX_BYTE { byte: 0x56 });
     }
 }
