@@ -1,5 +1,4 @@
 use crate::types::*;
-use std::convert::TryInto;
 
 pub fn low_byte(word: Word) -> Byte {
     word.to_be_bytes()[1]
