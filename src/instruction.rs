@@ -7,10 +7,28 @@ pub enum Instruction {
     SYS,
     CLS,
     RET,
-    JP { address: Word },
-    CALL { address: Word },
-    SE_VX_BYTE { byte: Byte },
-    SN_VX_BYTE { byte: Byte },
+    JP {
+        address: Word,
+    },
+    CALL {
+        address: Word,
+    },
+    SE_VX_BYTE {
+        register_x: Nibble,
+        byte: Byte,
+    },
+    SN_VX_BYTE {
+        register_x: Nibble,
+        byte: Byte,
+    },
+    SE_VX_VY {
+        register_x: Nibble,
+        register_y: Nibble,
+    },
+    LD_VX_BYTE {
+        register_x: Nibble,
+        byte: Byte,
+    },
 }
 
 #[derive(Debug, Snafu)]
@@ -37,9 +55,19 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             address: low_12(encoded_instr),
         }),
         0x3000 => Ok(Instruction::SE_VX_BYTE {
+            register_x: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
         0x4000 => Ok(Instruction::SN_VX_BYTE {
+            register_x: register_x(encoded_instr),
+            byte: low_byte(encoded_instr),
+        }),
+        0x5000 => Ok(Instruction::SE_VX_VY {
+            register_x: register_x(encoded_instr),
+            register_y: register_y(encoded_instr),
+        }),
+        0x6000 => Ok(Instruction::LD_VX_BYTE {
+            register_x: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
         _ => Err(InstructionError::BadInstruction),
@@ -82,13 +110,49 @@ mod tests {
 
     #[test]
     fn decode_se_vx_byte() {
-        let decoded = decode(0x3056);
-        assert_eq!(decoded.unwrap(), Instruction::SE_VX_BYTE { byte: 0x56 });
+        let decoded = decode(0x3456);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::SE_VX_BYTE {
+                register_x: 4,
+                byte: 0x56
+            }
+        );
     }
 
     #[test]
     fn decode_sn_vx_byte() {
-        let decoded = decode(0x4056);
-        assert_eq!(decoded.unwrap(), Instruction::SN_VX_BYTE { byte: 0x56 });
+        let decoded = decode(0x4556);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::SN_VX_BYTE {
+                register_x: 5,
+                byte: 0x56
+            }
+        );
+    }
+
+    #[test]
+    fn decode_se_vx_vy() {
+        let decoded = decode(0x5670);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::SE_VX_VY {
+                register_x: 6,
+                register_y: 7,
+            }
+        );
+    }
+
+    #[test]
+    fn decode_ld_vx_byte() {
+        let decoded = decode(0x6470);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::LD_VX_BYTE {
+                register_x: 4,
+                byte: 0x70,
+            }
+        );
     }
 }
