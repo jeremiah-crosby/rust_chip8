@@ -4,28 +4,28 @@ use snafu::Snafu;
 
 #[derive(Debug, PartialEq)]
 pub enum Instruction {
-    SYS,
-    CLS,
-    RET,
-    JP {
+    Sys,
+    Cls,
+    Ret,
+    Jp {
         address: Word,
     },
-    CALL {
+    Call {
         address: Word,
     },
-    SE_VX_BYTE {
+    SeVxByte {
         register_x: Nibble,
         byte: Byte,
     },
-    SN_VX_BYTE {
+    SnVxByte {
         register_x: Nibble,
         byte: Byte,
     },
-    SE_VX_VY {
+    SeVxVy {
         register_x: Nibble,
         register_y: Nibble,
     },
-    LD_VX_BYTE {
+    LdVxByte {
         register_x: Nibble,
         byte: Byte,
     },
@@ -43,30 +43,30 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
         0x0000 => {
             let subop = encoded_instr & 0xff;
             match subop {
-                0xE0 => Ok(Instruction::CLS),
-                0xEE => Ok(Instruction::RET),
-                _ => Ok(Instruction::SYS),
+                0xE0 => Ok(Instruction::Cls),
+                0xEE => Ok(Instruction::Ret),
+                _ => Ok(Instruction::Sys),
             }
         }
-        0x1000 => Ok(Instruction::JP {
+        0x1000 => Ok(Instruction::Jp {
             address: low_12(encoded_instr),
         }),
-        0x2000 => Ok(Instruction::CALL {
+        0x2000 => Ok(Instruction::Call {
             address: low_12(encoded_instr),
         }),
-        0x3000 => Ok(Instruction::SE_VX_BYTE {
+        0x3000 => Ok(Instruction::SeVxByte {
             register_x: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
-        0x4000 => Ok(Instruction::SN_VX_BYTE {
+        0x4000 => Ok(Instruction::SnVxByte {
             register_x: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
-        0x5000 => Ok(Instruction::SE_VX_VY {
+        0x5000 => Ok(Instruction::SeVxVy {
             register_x: register_x(encoded_instr),
             register_y: register_y(encoded_instr),
         }),
-        0x6000 => Ok(Instruction::LD_VX_BYTE {
+        0x6000 => Ok(Instruction::LdVxByte {
             register_x: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
@@ -81,31 +81,31 @@ mod tests {
     #[test]
     fn decode_sys() {
         let decoded = decode(0x0678);
-        assert_eq!(decoded.unwrap(), Instruction::SYS)
+        assert_eq!(decoded.unwrap(), Instruction::Sys)
     }
 
     #[test]
     fn decode_cls() {
         let decoded = decode(0x00E0);
-        assert_eq!(decoded.unwrap(), Instruction::CLS);
+        assert_eq!(decoded.unwrap(), Instruction::Cls);
     }
 
     #[test]
     fn decode_ret() {
         let decoded = decode(0x00EE);
-        assert_eq!(decoded.unwrap(), Instruction::RET);
+        assert_eq!(decoded.unwrap(), Instruction::Ret);
     }
 
     #[test]
     fn decode_jp() {
         let decoded = decode(0x1765);
-        assert_eq!(decoded.unwrap(), Instruction::JP { address: 0x765 });
+        assert_eq!(decoded.unwrap(), Instruction::Jp { address: 0x765 });
     }
 
     #[test]
     fn decode_call() {
         let decoded = decode(0x2765);
-        assert_eq!(decoded.unwrap(), Instruction::CALL { address: 0x765 });
+        assert_eq!(decoded.unwrap(), Instruction::Call { address: 0x765 });
     }
 
     #[test]
@@ -113,7 +113,7 @@ mod tests {
         let decoded = decode(0x3456);
         assert_eq!(
             decoded.unwrap(),
-            Instruction::SE_VX_BYTE {
+            Instruction::SeVxByte {
                 register_x: 4,
                 byte: 0x56
             }
@@ -125,7 +125,7 @@ mod tests {
         let decoded = decode(0x4556);
         assert_eq!(
             decoded.unwrap(),
-            Instruction::SN_VX_BYTE {
+            Instruction::SnVxByte {
                 register_x: 5,
                 byte: 0x56
             }
@@ -137,7 +137,7 @@ mod tests {
         let decoded = decode(0x5670);
         assert_eq!(
             decoded.unwrap(),
-            Instruction::SE_VX_VY {
+            Instruction::SeVxVy {
                 register_x: 6,
                 register_y: 7,
             }
@@ -149,7 +149,7 @@ mod tests {
         let decoded = decode(0x6470);
         assert_eq!(
             decoded.unwrap(),
-            Instruction::LD_VX_BYTE {
+            Instruction::LdVxByte {
                 register_x: 4,
                 byte: 0x70,
             }
