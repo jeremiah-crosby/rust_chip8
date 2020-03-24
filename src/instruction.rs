@@ -10,6 +10,7 @@ pub enum Instruction {
     JP { address: Word },
     CALL { address: Word },
     SE_VX_BYTE { byte: Byte },
+    SN_VX_BYTE { byte: Byte },
 }
 
 #[derive(Debug, Snafu)]
@@ -36,6 +37,9 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             address: low_12(encoded_instr),
         }),
         0x3000 => Ok(Instruction::SE_VX_BYTE {
+            byte: low_byte(encoded_instr),
+        }),
+        0x4000 => Ok(Instruction::SN_VX_BYTE {
             byte: low_byte(encoded_instr),
         }),
         _ => Err(InstructionError::BadInstruction),
@@ -80,5 +84,11 @@ mod tests {
     fn decode_se_vx_byte() {
         let decoded = decode(0x3056);
         assert_eq!(decoded.unwrap(), Instruction::SE_VX_BYTE { byte: 0x56 });
+    }
+
+    #[test]
+    fn decode_sn_vx_byte() {
+        let decoded = decode(0x4056);
+        assert_eq!(decoded.unwrap(), Instruction::SN_VX_BYTE { byte: 0x56 });
     }
 }
