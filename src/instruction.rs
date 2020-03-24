@@ -7,28 +7,12 @@ pub enum Instruction {
     Sys,
     Cls,
     Ret,
-    Jp {
-        address: Word,
-    },
-    Call {
-        address: Word,
-    },
-    SeVxByte {
-        register_x: Nibble,
-        byte: Byte,
-    },
-    SnVxByte {
-        register_x: Nibble,
-        byte: Byte,
-    },
-    SeVxVy {
-        register_x: Nibble,
-        register_y: Nibble,
-    },
-    LdVxByte {
-        register_x: Nibble,
-        byte: Byte,
-    },
+    Jp { address: Word },
+    Call { address: Word },
+    SeVxByte { vx: Nibble, byte: Byte },
+    SnVxByte { vx: Nibble, byte: Byte },
+    SeVxVy { vx: Nibble, vy: Nibble },
+    LdVxByte { vx: Nibble, byte: Byte },
 }
 
 #[derive(Debug, Snafu)]
@@ -55,19 +39,19 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             address: low_12(encoded_instr),
         }),
         0x3000 => Ok(Instruction::SeVxByte {
-            register_x: register_x(encoded_instr),
+            vx: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
         0x4000 => Ok(Instruction::SnVxByte {
-            register_x: register_x(encoded_instr),
+            vx: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
         0x5000 => Ok(Instruction::SeVxVy {
-            register_x: register_x(encoded_instr),
-            register_y: register_y(encoded_instr),
+            vx: register_x(encoded_instr),
+            vy: register_y(encoded_instr),
         }),
         0x6000 => Ok(Instruction::LdVxByte {
-            register_x: register_x(encoded_instr),
+            vx: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
         _ => Err(InstructionError::BadInstruction),
@@ -113,10 +97,7 @@ mod tests {
         let decoded = decode(0x3456);
         assert_eq!(
             decoded.unwrap(),
-            Instruction::SeVxByte {
-                register_x: 4,
-                byte: 0x56
-            }
+            Instruction::SeVxByte { vx: 4, byte: 0x56 }
         );
     }
 
@@ -125,23 +106,14 @@ mod tests {
         let decoded = decode(0x4556);
         assert_eq!(
             decoded.unwrap(),
-            Instruction::SnVxByte {
-                register_x: 5,
-                byte: 0x56
-            }
+            Instruction::SnVxByte { vx: 5, byte: 0x56 }
         );
     }
 
     #[test]
     fn decode_se_vx_vy() {
         let decoded = decode(0x5670);
-        assert_eq!(
-            decoded.unwrap(),
-            Instruction::SeVxVy {
-                register_x: 6,
-                register_y: 7,
-            }
-        );
+        assert_eq!(decoded.unwrap(), Instruction::SeVxVy { vx: 6, vy: 7 });
     }
 
     #[test]
@@ -149,10 +121,7 @@ mod tests {
         let decoded = decode(0x6470);
         assert_eq!(
             decoded.unwrap(),
-            Instruction::LdVxByte {
-                register_x: 4,
-                byte: 0x70,
-            }
+            Instruction::LdVxByte { vx: 4, byte: 0x70 }
         );
     }
 }
