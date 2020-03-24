@@ -13,6 +13,16 @@ pub enum Instruction {
     SnVxByte { vx: Nibble, byte: Byte },
     SeVxVy { vx: Nibble, vy: Nibble },
     LdVxByte { vx: Nibble, byte: Byte },
+    AddVxByte { vx: Nibble, byte: Byte },
+    LdVxVy { vx: Nibble, vy: Nibble },
+    OrVxVy { vx: Nibble, vy: Nibble },
+    AndVxVy { vx: Nibble, vy: Nibble },
+    XorVxVy { vx: Nibble, vy: Nibble },
+    AddVxVy { vx: Nibble, vy: Nibble },
+    SubVxVy { vx: Nibble, vy: Nibble },
+    ShrVxVy { vx: Nibble, vy: Nibble },
+    SubnVxVy { vx: Nibble, vy: Nibble },
+    ShlVxVy { vx: Nibble, vy: Nibble },
 }
 
 #[derive(Debug, Snafu)]
@@ -54,6 +64,49 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             vx: register_x(encoded_instr),
             byte: low_byte(encoded_instr),
         }),
+        0x7000 => Ok(Instruction::AddVxByte {
+            vx: register_x(encoded_instr),
+            byte: low_byte(encoded_instr),
+        }),
+        0x8000 => match encoded_instr & 0x000f {
+            0x0 => Ok(Instruction::LdVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0x1 => Ok(Instruction::OrVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0x2 => Ok(Instruction::AndVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0x3 => Ok(Instruction::XorVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0x4 => Ok(Instruction::AddVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0x5 => Ok(Instruction::SubVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0x6 => Ok(Instruction::ShrVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0x7 => Ok(Instruction::SubnVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            0xe => Ok(Instruction::ShlVxVy {
+                vx: register_x(encoded_instr),
+                vy: register_y(encoded_instr),
+            }),
+            _ => Err(InstructionError::BadInstruction),
+        },
         _ => Err(InstructionError::BadInstruction),
     }
 }
@@ -123,5 +176,77 @@ mod tests {
             decoded.unwrap(),
             Instruction::LdVxByte { vx: 4, byte: 0x70 }
         );
+    }
+
+    #[test]
+    fn decode_add_vx_byte() {
+        let decoded = decode(0x7470);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::AddVxByte { vx: 4, byte: 0x70 }
+        );
+    }
+
+    #[test]
+    fn decode_ld_vx_vy() {
+        let decoded = decode(0x8210);
+        assert_eq!(decoded.unwrap(), Instruction::LdVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_or_vx_vy() {
+        let decoded = decode(0x8211);
+        assert_eq!(decoded.unwrap(), Instruction::OrVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_and_vx_vy() {
+        let decoded = decode(0x8212);
+        assert_eq!(decoded.unwrap(), Instruction::AndVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_xor_vx_vy() {
+        let decoded = decode(0x8213);
+        assert_eq!(decoded.unwrap(), Instruction::XorVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_add_vx_vy() {
+        let decoded = decode(0x8214);
+        assert_eq!(decoded.unwrap(), Instruction::AddVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_sub_vx_vy() {
+        let decoded = decode(0x8215);
+        assert_eq!(decoded.unwrap(), Instruction::SubVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_shr_vx_vy() {
+        let decoded = decode(0x8216);
+        assert_eq!(decoded.unwrap(), Instruction::ShrVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_subn_vx_vy() {
+        let decoded = decode(0x8217);
+        assert_eq!(decoded.unwrap(), Instruction::SubnVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_shl_vx_vy() {
+        let decoded = decode(0x821e);
+        assert_eq!(decoded.unwrap(), Instruction::ShlVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_bad_8_prefix_instruction() {
+        let decoded = decode(0x821A);
+        match decoded {
+            Err(InstructionError::BadInstruction) => assert!(true),
+            _ => assert!(false, "Expected BadInstruction error"),
+        };
     }
 }
