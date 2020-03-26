@@ -23,6 +23,13 @@ pub enum Instruction {
     ShrVxVy { vx: Nibble, vy: Nibble },
     SubnVxVy { vx: Nibble, vy: Nibble },
     ShlVxVy { vx: Nibble, vy: Nibble },
+    SneVxVy { vx: Nibble, vy: Nibble },
+    LdIFromAddr { address: Word },
+    JpV0PlusAddr { address: Word },
+    RndVxByte { vx: Nibble, byte: Byte },
+    DrwVxVy { vx: Nibble, vy: Nibble, n: Nibble },
+    SkipPressedVx { vx: Nibble },
+    SkipNotPressedVx { vx: Nibble },
 }
 
 #[derive(Debug, Snafu)]
@@ -104,6 +111,34 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
             0xe => Ok(Instruction::ShlVxVy {
                 vx: register_x(encoded_instr),
                 vy: register_y(encoded_instr),
+            }),
+            _ => Err(InstructionError::BadInstruction),
+        },
+        0x9000 => Ok(Instruction::SneVxVy {
+            vx: register_x(encoded_instr),
+            vy: register_y(encoded_instr),
+        }),
+        0xA000 => Ok(Instruction::LdIFromAddr {
+            address: low_12(encoded_instr),
+        }),
+        0xB000 => Ok(Instruction::JpV0PlusAddr {
+            address: low_12(encoded_instr),
+        }),
+        0xC000 => Ok(Instruction::RndVxByte {
+            vx: register_x(encoded_instr),
+            byte: low_byte(encoded_instr),
+        }),
+        0xD000 => Ok(Instruction::DrwVxVy {
+            vx: register_x(encoded_instr),
+            vy: register_y(encoded_instr),
+            n: low_nibble(encoded_instr),
+        }),
+        0xE000 => match encoded_instr & 0x00ff {
+            0x9e => Ok(Instruction::SkipPressedVx {
+                vx: register_x(encoded_instr),
+            }),
+            0xa1 => Ok(Instruction::SkipNotPressedVx {
+                vx: register_x(encoded_instr),
             }),
             _ => Err(InstructionError::BadInstruction),
         },
@@ -244,6 +279,73 @@ mod tests {
     #[test]
     fn decode_bad_8_prefix_instruction() {
         let decoded = decode(0x821A);
+        match decoded {
+            Err(InstructionError::BadInstruction) => assert!(true),
+            _ => assert!(false, "Expected BadInstruction error"),
+        };
+    }
+
+    #[test]
+    fn decode_sne_vx_vy() {
+        let decoded = decode(0x9210);
+        assert_eq!(decoded.unwrap(), Instruction::SneVxVy { vx: 2, vy: 1 });
+    }
+
+    #[test]
+    fn decode_ld_I_from_addr() {
+        let decoded = decode(0xa456);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::LdIFromAddr { address: 0x456 }
+        );
+    }
+
+    #[test]
+    fn decode_jp_v0_plus_addr() {
+        let decoded = decode(0xb456);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::JpV0PlusAddr { address: 0x456 }
+        );
+    }
+
+    #[test]
+    fn decode_rnd_vx_byte() {
+        let decoded = decode(0xc9aa);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::RndVxByte { vx: 9, byte: 0xaa }
+        );
+    }
+
+    #[test]
+    fn decode_drw_vx_vy() {
+        let decoded = decode(0xd9ca);
+        assert_eq!(
+            decoded.unwrap(),
+            Instruction::DrwVxVy {
+                vx: 9,
+                vy: 0xc,
+                n: 0xa
+            }
+        );
+    }
+
+    #[test]
+    fn decode_skip_pressed_vx() {
+        let decoded = decode(0xe89e);
+        assert_eq!(decoded.unwrap(), Instruction::SkipPressedVx { vx: 8 });
+    }
+
+    #[test]
+    fn decode_skip_not_pressed_vx() {
+        let decoded = decode(0xe8a1);
+        assert_eq!(decoded.unwrap(), Instruction::SkipNotPressedVx { vx: 8 });
+    }
+
+    #[test]
+    fn decode_bad_e_prefix_instruction() {
+        let decoded = decode(0xE255);
         match decoded {
             Err(InstructionError::BadInstruction) => assert!(true),
             _ => assert!(false, "Expected BadInstruction error"),
