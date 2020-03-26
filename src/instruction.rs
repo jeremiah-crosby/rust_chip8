@@ -30,6 +30,15 @@ pub enum Instruction {
     DrwVxVy { vx: Nibble, vy: Nibble, n: Nibble },
     SkipPressedVx { vx: Nibble },
     SkipNotPressedVx { vx: Nibble },
+    LoadDelayTimerVx { vx: Nibble },
+    LoadKeyVx { vx: Nibble },
+    SetDelayTimerVx { vx: Nibble },
+    SetSoundTimerVx { vx: Nibble },
+    AddIVx { vx: Nibble },
+    LoadFVx { vx: Nibble },
+    LoadBVx { vx: Nibble },
+    StoreVxArray { vx: Nibble },
+    ReadVxArray { vx: Nibble },
 }
 
 #[derive(Debug, Snafu)]
@@ -138,6 +147,36 @@ pub fn decode(encoded_instr: Word) -> Result<Instruction, InstructionError> {
                 vx: register_x(encoded_instr),
             }),
             0xa1 => Ok(Instruction::SkipNotPressedVx {
+                vx: register_x(encoded_instr),
+            }),
+            _ => Err(InstructionError::BadInstruction),
+        },
+        0xF000 => match encoded_instr & 0x00ff {
+            0x07 => Ok(Instruction::LoadDelayTimerVx {
+                vx: register_x(encoded_instr),
+            }),
+            0x0a => Ok(Instruction::LoadKeyVx {
+                vx: register_x(encoded_instr),
+            }),
+            0x15 => Ok(Instruction::SetDelayTimerVx {
+                vx: register_x(encoded_instr),
+            }),
+            0x18 => Ok(Instruction::SetSoundTimerVx {
+                vx: register_x(encoded_instr),
+            }),
+            0x1e => Ok(Instruction::AddIVx {
+                vx: register_x(encoded_instr),
+            }),
+            0x29 => Ok(Instruction::LoadFVx {
+                vx: register_x(encoded_instr),
+            }),
+            0x33 => Ok(Instruction::LoadBVx {
+                vx: register_x(encoded_instr),
+            }),
+            0x55 => Ok(Instruction::StoreVxArray {
+                vx: register_x(encoded_instr),
+            }),
+            0x65 => Ok(Instruction::ReadVxArray {
                 vx: register_x(encoded_instr),
             }),
             _ => Err(InstructionError::BadInstruction),
@@ -346,6 +385,69 @@ mod tests {
     #[test]
     fn decode_bad_e_prefix_instruction() {
         let decoded = decode(0xE255);
+        match decoded {
+            Err(InstructionError::BadInstruction) => assert!(true),
+            _ => assert!(false, "Expected BadInstruction error"),
+        };
+    }
+
+    #[test]
+    fn decode_load_delay_timer_vx() {
+        let decoded = decode(0xf807);
+        assert_eq!(decoded.unwrap(), Instruction::LoadDelayTimerVx { vx: 8 });
+    }
+
+    #[test]
+    fn decode_load_key_vx() {
+        let decoded = decode(0xf80a);
+        assert_eq!(decoded.unwrap(), Instruction::LoadKeyVx { vx: 8 });
+    }
+
+    #[test]
+    fn decode_set_delay_timer_vx() {
+        let decoded = decode(0xf715);
+        assert_eq!(decoded.unwrap(), Instruction::SetDelayTimerVx { vx: 7 });
+    }
+
+    #[test]
+    fn decode_set_sound_timer_vx() {
+        let decoded = decode(0xf718);
+        assert_eq!(decoded.unwrap(), Instruction::SetSoundTimerVx { vx: 7 });
+    }
+
+    #[test]
+    fn decode_add_i_vx() {
+        let decoded = decode(0xf71e);
+        assert_eq!(decoded.unwrap(), Instruction::AddIVx { vx: 7 });
+    }
+
+    #[test]
+    fn decode_load_f_vx() {
+        let decoded = decode(0xf729);
+        assert_eq!(decoded.unwrap(), Instruction::LoadFVx { vx: 7 });
+    }
+
+    #[test]
+    fn decode_load_b_vx() {
+        let decoded = decode(0xf733);
+        assert_eq!(decoded.unwrap(), Instruction::LoadBVx { vx: 7 });
+    }
+
+    #[test]
+    fn decode_store_vx_array() {
+        let decoded = decode(0xf755);
+        assert_eq!(decoded.unwrap(), Instruction::StoreVxArray { vx: 7 });
+    }
+
+    #[test]
+    fn decode_read_vx_array() {
+        let decoded = decode(0xf665);
+        assert_eq!(decoded.unwrap(), Instruction::ReadVxArray { vx: 6 });
+    }
+
+    #[test]
+    fn decode_bad_f_prefix_instruction() {
+        let decoded = decode(0xF288);
         match decoded {
             Err(InstructionError::BadInstruction) => assert!(true),
             _ => assert!(false, "Expected BadInstruction error"),
