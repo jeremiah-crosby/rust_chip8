@@ -1,9 +1,11 @@
+use crate::graphics::*;
 use crate::instruction::*;
 use crate::types::*;
 use crate::util::*;
 use rand::prelude::*;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 
-#[derive(Default)]
 pub struct VirtualMachine {
     memory: Vec<u8>,
     registers: Vec<u8>,
@@ -14,20 +16,27 @@ pub struct VirtualMachine {
     stack: Vec<u16>,
     stack_pointer: Word,
     rng: ThreadRng,
+    graphics: Graphics,
+    event_pump: sdl2::EventPump,
+    done: bool,
 }
 
 impl VirtualMachine {
-    pub fn new() -> VirtualMachine {
+    pub fn new(sdl_context: &sdl2::Sdl) -> VirtualMachine {
+        let mut event_pump = sdl_context.event_pump().unwrap();
         VirtualMachine {
-            memory: Vec::with_capacity(4096),
-            registers: Vec::with_capacity(16),
+            memory: vec![0; 4096],
+            registers: vec![0; 16],
             index: 0,
             pc: 0x200,
             delay_timer: 0,
             sound_timer: 0,
-            stack: Vec::with_capacity(16),
+            stack: vec![0; 16],
             stack_pointer: 0,
             rng: thread_rng(),
+            graphics: Graphics::new(sdl_context),
+            event_pump,
+            done: false,
         }
     }
 
@@ -41,6 +50,26 @@ impl VirtualMachine {
                 }
                 Err(err) => {}
             };
+
+            self.handle_events();
+            self.graphics.render();
+
+            if self.done {
+                break;
+            }
+        }
+    }
+
+    fn handle_events(&mut self) {
+        for event in self.event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => self.done = true,
+                _ => {}
+            }
         }
     }
 
