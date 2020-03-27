@@ -6,12 +6,14 @@ mod types;
 mod util;
 mod vm;
 
-use std::time::Duration;
+use std::env;
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
     let sdl_context = sdl2::init().unwrap();
     let mut vm = vm::VirtualMachine::new(&sdl_context);
-    vm.run();
+    let rom_path = &args[1];
+    vm.run(rom_path.to_string());
     // let video_subsystem = sdl_context.video().unwrap();
 
     // let window = video_subsystem
