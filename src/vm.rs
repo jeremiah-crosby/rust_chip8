@@ -9,6 +9,8 @@ pub struct VirtualMachine {
     registers: Vec<u8>,
     index: Word,
     pc: Word,
+    sound_timer: u8,
+    delay_timer: u8,
     stack: Vec<u16>,
     stack_pointer: Word,
     rng: ThreadRng,
@@ -21,6 +23,8 @@ impl VirtualMachine {
             registers: Vec::with_capacity(16),
             index: 0,
             pc: 0x200,
+            delay_timer: 0,
+            sound_timer: 0,
             stack: Vec::with_capacity(16),
             stack_pointer: 0,
             rng: thread_rng(),
@@ -142,16 +146,16 @@ impl VirtualMachine {
                 // TODO
             }
             Instruction::LoadDelayTimerVx { vx } => {
-                // TODO
+                self.registers[vx as usize] = self.delay_timer;
             }
             Instruction::LoadKeyVx { vx } => {
                 // TODO
             }
             Instruction::SetDelayTimerVx { vx } => {
-                // TODO
+                self.delay_timer = self.registers[vx as usize];
             }
             Instruction::SetSoundTimerVx { vx } => {
-                // TODO
+                self.sound_timer = self.register[vx as usize];
             }
             Instruction::AddIVx { vx } => {
                 self.index += self.registers[vx as usize] as u16;
