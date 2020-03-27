@@ -1,10 +1,9 @@
 use crate::graphics::*;
+use crate::input::*;
 use crate::instruction::*;
 use crate::types::*;
 use crate::util::*;
 use rand::prelude::*;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
 
 const ROM_START: usize = 0x200;
 
@@ -27,13 +26,12 @@ pub struct VirtualMachine {
     stack_pointer: Word,
     rng: ThreadRng,
     graphics: Graphics,
-    event_pump: sdl2::EventPump,
+    input: Input,
     done: bool,
 }
 
 impl VirtualMachine {
     pub fn new(sdl_context: &sdl2::Sdl) -> VirtualMachine {
-        let mut event_pump = sdl_context.event_pump().unwrap();
         VirtualMachine {
             memory: vec![0; 4096],
             registers: vec![0; 16],
@@ -45,7 +43,7 @@ impl VirtualMachine {
             stack_pointer: 0,
             rng: thread_rng(),
             graphics: Graphics::new(sdl_context),
-            event_pump,
+            input: Input::new(sdl_context),
             done: false,
         }
     }
@@ -90,16 +88,7 @@ impl VirtualMachine {
     }
 
     fn handle_events(&mut self) {
-        for event in self.event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => self.done = true,
-                _ => {}
-            }
-        }
+        self.done = self.input.process_input();
     }
 
     fn fetch(&mut self) -> Word {

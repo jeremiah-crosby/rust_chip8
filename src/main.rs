@@ -1,6 +1,7 @@
 extern crate sdl2;
 
 mod graphics;
+mod input;
 mod instruction;
 mod types;
 mod util;
