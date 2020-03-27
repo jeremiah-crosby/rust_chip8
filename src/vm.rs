@@ -97,7 +97,10 @@ impl VirtualMachine {
 
     fn execute(&mut self, instruction: Instruction) {
         match instruction {
-            Instruction::Cls => {} // TODO: Clear display
+            Instruction::Cls => {
+                self.graphics.clear();
+                self.inc_pc();
+            } // TODO: Clear display
             Instruction::Ret => {
                 self.pc = self.stack[self.stack_pointer as usize].into();
                 self.stack_pointer -= 1;
