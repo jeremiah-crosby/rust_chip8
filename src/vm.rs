@@ -155,7 +155,7 @@ impl VirtualMachine {
                 self.delay_timer = self.registers[vx as usize];
             }
             Instruction::SetSoundTimerVx { vx } => {
-                self.sound_timer = self.register[vx as usize];
+                self.sound_timer = self.registers[vx as usize];
             }
             Instruction::AddIVx { vx } => {
                 self.index += self.registers[vx as usize] as u16;
