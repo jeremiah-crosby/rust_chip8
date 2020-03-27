@@ -10,6 +10,7 @@ use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
     let sdl_context = sdl2::init().unwrap();
     let mut vm = vm::VirtualMachine::new(&sdl_context);
     let rom_path = &args[1];

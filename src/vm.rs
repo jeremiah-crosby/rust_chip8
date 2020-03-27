@@ -8,6 +8,14 @@ use sdl2::keyboard::Keycode;
 
 const ROM_START: usize = 0x200;
 
+const FONT_SET: [u8; 80] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xF0, 0x10, 0xF0, 0x80, 0xF0, 0xF0,
+    0x10, 0xF0, 0x10, 0xF0, 0x90, 0x90, 0xF0, 0x10, 0x10, 0xF0, 0x80, 0xF0, 0x10, 0xF0, 0xF0, 0x80,
+    0xF0, 0x90, 0xF0, 0xF0, 0x10, 0x20, 0x40, 0x40, 0xF0, 0x90, 0xF0, 0x90, 0xF0, 0xF0, 0x90, 0xF0,
+    0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0, 0xF0, 0x80, 0x80, 0x80,
+    0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80,
+];
+
 pub struct VirtualMachine {
     memory: Vec<u8>,
     registers: Vec<u8>,
@@ -43,9 +51,20 @@ impl VirtualMachine {
     }
 
     pub fn run(&mut self, rom_path: String) {
+        for i in 0..FONT_SET.len() {
+            self.memory[i] = FONT_SET[i];
+        }
+
         self.load_rom(&rom_path);
 
         loop {
+            if self.delay_timer > 0 {
+                self.delay_timer -= 1
+            }
+            if self.sound_timer > 0 {
+                self.sound_timer -= 1
+            }
+
             let word = self.fetch();
             let decode_result = decode(word);
             match decode_result {
@@ -100,15 +119,15 @@ impl VirtualMachine {
             Instruction::Cls => {
                 self.graphics.clear();
                 self.inc_pc();
-            } // TODO: Clear display
+            }
             Instruction::Ret => {
-                self.pc = self.stack[self.stack_pointer as usize].into();
                 self.stack_pointer -= 1;
+                self.pc = self.stack[self.stack_pointer as usize].into();
             }
             Instruction::Jp { address } => self.pc = address,
             Instruction::Call { address } => {
+                self.stack[self.stack_pointer as usize] = self.pc + 2;
                 self.stack_pointer += 1;
-                self.stack[self.stack_pointer as usize] = self.pc;
                 self.pc = address;
             }
             Instruction::SeVxByte { vx, byte } => {
@@ -137,7 +156,9 @@ impl VirtualMachine {
                 self.inc_pc();
             }
             Instruction::AddVxByte { vx, byte } => {
-                self.registers[vx as usize] += byte;
+                let addend = self.registers[vx as usize] as u16;
+                let result = addend + byte as u16;
+                self.registers[vx as usize] = result as u8;
                 self.inc_pc();
             }
             Instruction::LdVxVy { vx, vy } => {
@@ -157,36 +178,39 @@ impl VirtualMachine {
                 self.inc_pc();
             }
             Instruction::AddVxVy { vx, vy } => {
-                let result: Word =
-                    (self.registers[vx as usize] + self.registers[vy as usize]).into();
-                self.registers[0xf] = if result > 255 { 1 } else { 0 };
+                let result: Word = (self.registers[vx as usize] as u16
+                    + self.registers[vy as usize] as u16)
+                    .into();
                 self.registers[vx as usize] = low_byte(result);
+                self.registers[0xf] = if result > 255 { 1 } else { 0 };
                 self.inc_pc();
             }
             Instruction::SubVxVy { vx, vy } => {
                 let s1 = self.registers[vx as usize];
                 let s2 = self.registers[vy as usize];
                 self.registers[0xf] = if s1 > s2 { 1 } else { 0 };
-                self.registers[vx as usize] = s1 - s2;
+                self.registers[vx as usize] = s1.wrapping_sub(s2);
                 self.inc_pc();
             }
             Instruction::ShrVxVy { vx, .. } => {
-                let result = self.registers[vx as usize] >> 1;
-                self.registers[0xf] = if result & 0x1 == 1 { 1 } else { 0 };
-                self.registers[vx as usize] = result;
+                self.registers[0xf] = self.registers[vx as usize] & 1;
+                self.registers[vx as usize] >>= 1;
                 self.inc_pc();
             }
             Instruction::SubnVxVy { vx, vy } => {
                 let s1 = self.registers[vy as usize];
                 let s2 = self.registers[vx as usize];
                 self.registers[0xf] = if s1 > s2 { 1 } else { 0 };
-                self.registers[vx as usize] = s1 - s2;
+                self.registers[vx as usize] = s1.wrapping_sub(s2);
                 self.inc_pc();
             }
             Instruction::ShlVxVy { vx, .. } => {
-                let result = self.registers[vx as usize] << 1;
-                self.registers[0xf] = if result & 0x80 == 1 { 1 } else { 0 };
-                self.registers[vx as usize] = result;
+                self.registers[0xf] = if self.registers[vx as usize] & 0x80 == 1 {
+                    1
+                } else {
+                    0
+                };
+                self.registers[vx as usize] <<= 1;
                 self.inc_pc();
             }
             Instruction::SneVxVy { vx, vy } => {
@@ -209,7 +233,12 @@ impl VirtualMachine {
                 self.inc_pc();
             }
             Instruction::DrwVxVy { vx, vy, n } => {
-                // TODO
+                let sprite_bytes =
+                    &self.memory[self.index as usize..(self.index + n as u16) as usize];
+                let x = self.registers[vx as usize];
+                let y = self.registers[vy as usize];
+                let collision = self.graphics.draw_sprite(x, y, sprite_bytes);
+                self.registers[0xf] = if collision { 1 } else { 0 };
                 self.inc_pc();
             }
             Instruction::SkipPressedVx { vx } => {
@@ -241,14 +270,14 @@ impl VirtualMachine {
                 self.inc_pc();
             }
             Instruction::LoadFVx { vx } => {
-                // TODO
+                self.index = self.registers[vx as usize] as u16 * 5u16;
                 self.inc_pc();
             }
             Instruction::LoadBVx { vx } => {
                 let value = self.registers[vx as usize];
                 self.memory[self.index as usize] = value / 100;
                 self.memory[self.index as usize + 1usize] = (value % 100) / 10;
-                self.memory[self.index as usize + 2usize] = (value % 100) % 10;
+                self.memory[self.index as usize + 2usize] = value % 10;
                 self.inc_pc();
             }
             Instruction::StoreVxArray { vx } => {

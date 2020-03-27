@@ -1,10 +1,10 @@
+use bitvec::prelude::*;
 use sdl2::pixels::Color;
 
 const WIDTH: usize = 64;
 const HEIGHT: usize = 32;
 
 pub struct Graphics {
-    video: sdl2::VideoSubsystem,
     vram: [[u8; WIDTH]; HEIGHT],
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
 }
@@ -23,7 +23,6 @@ impl Graphics {
             .expect("Could not set logical size");
 
         Graphics {
-            video,
             vram: [[0; WIDTH]; HEIGHT],
             canvas,
         }
@@ -35,6 +34,25 @@ impl Graphics {
                 self.vram[y][x] = 0;
             }
         }
+    }
+
+    pub fn draw_sprite(&mut self, x: u8, y: u8, sprite_bytes: &[u8]) -> bool {
+        let mut collision = false;
+        for row in 0..sprite_bytes.len() {
+            let y = (y as usize + row) % HEIGHT;
+            let byte = sprite_bytes[row];
+            let bits = BitVec::<Msb0, u8>::from_element(byte);
+            for col in 0..bits.len() {
+                let x = (x as usize + col) % WIDTH;
+                let cur_pixel = self.vram[y].get_mut(x).unwrap();
+                if bits[col] && (*cur_pixel > 0) {
+                    collision = true;
+                }
+                *cur_pixel ^= if bits[col] { 1 } else { 0 };
+            }
+        }
+
+        collision
     }
 
     pub fn render(&mut self) {
