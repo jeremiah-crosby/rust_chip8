@@ -28,6 +28,8 @@ pub struct VirtualMachine {
     graphics: Graphics,
     input: Input,
     done: bool,
+    waiting_for_key: bool,
+    key_register: u8,
 }
 
 impl VirtualMachine {
@@ -45,6 +47,8 @@ impl VirtualMachine {
             graphics: Graphics::new(sdl_context),
             input: Input::new(sdl_context),
             done: false,
+            waiting_for_key: false,
+            key_register: 0,
         }
     }
 
@@ -56,27 +60,34 @@ impl VirtualMachine {
         self.load_rom(&rom_path);
 
         loop {
-            if self.delay_timer > 0 {
-                self.delay_timer -= 1
-            }
-            if self.sound_timer > 0 {
-                self.sound_timer -= 1
-            }
-
-            let word = self.fetch();
-            let decode_result = decode(word);
-            match decode_result {
-                Ok(instruction) => {
-                    self.execute(instruction);
-                }
-                Err(err) => {}
-            };
-
             self.handle_events();
-            self.graphics.render();
+            if self.waiting_for_key {
+                if let Some(i) = self.input.get_first_pressed_key() {
+                    self.registers[self.key_register as usize] = i as u8;
+                    self.waiting_for_key = false;
+                }
+            } else {
+                if self.delay_timer > 0 {
+                    self.delay_timer -= 1
+                }
+                if self.sound_timer > 0 {
+                    self.sound_timer -= 1
+                }
 
-            if self.done {
-                break;
+                let word = self.fetch();
+                let decode_result = decode(word);
+                match decode_result {
+                    Ok(instruction) => {
+                        self.execute(instruction);
+                    }
+                    Err(err) => {}
+                };
+
+                self.graphics.render();
+
+                if self.done {
+                    break;
+                }
             }
         }
     }
@@ -231,19 +242,26 @@ impl VirtualMachine {
                 self.inc_pc();
             }
             Instruction::SkipPressedVx { vx } => {
-                // TODO
-                self.inc_pc();
+                self.pc += if self.input.is_pressed(self.registers[vx as usize] as usize) {
+                    4
+                } else {
+                    2
+                };
             }
             Instruction::SkipNotPressedVx { vx } => {
-                // TODO
-                self.inc_pc();
+                self.pc += if !self.input.is_pressed(self.registers[vx as usize] as usize) {
+                    4
+                } else {
+                    2
+                };
             }
             Instruction::LoadDelayTimerVx { vx } => {
                 self.registers[vx as usize] = self.delay_timer;
                 self.inc_pc();
             }
             Instruction::LoadKeyVx { vx } => {
-                // TODO
+                self.waiting_for_key = true;
+                self.key_register = vx;
                 self.inc_pc();
             }
             Instruction::SetDelayTimerVx { vx } => {

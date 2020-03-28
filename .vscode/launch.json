@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/rust_chip8.exe",
             "args": [
-                "C:\\Users\\Jeremiah\\ch8\\zero.ch8"
+                "C:\\Users\\Jeremiah\\ch8\\space-invaders.ch8"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
