@@ -1,6 +1,8 @@
+use crate::audio::*;
 use crate::graphics::*;
 use crate::input::*;
 use crate::instruction::*;
+use crate::timer::*;
 use crate::types::*;
 use crate::util::*;
 use rand::prelude::*;
@@ -20,12 +22,13 @@ pub struct VirtualMachine {
     registers: Vec<u8>,
     index: Word,
     pc: Word,
-    sound_timer: u8,
-    delay_timer: u8,
+    sound_timer: Timer,
+    delay_timer: Timer,
     stack: Vec<u16>,
     stack_pointer: Word,
     rng: ThreadRng,
     graphics: Graphics,
+    audio: Audio,
     input: Input,
     done: bool,
     waiting_for_key: bool,
@@ -39,12 +42,13 @@ impl VirtualMachine {
             registers: vec![0; 16],
             index: 0,
             pc: ROM_START as u16,
-            delay_timer: 0,
-            sound_timer: 0,
+            delay_timer: Timer::new(),
+            sound_timer: Timer::new(),
             stack: vec![0; 16],
             stack_pointer: 0,
             rng: thread_rng(),
             graphics: Graphics::new(sdl_context),
+            audio: Audio::new(sdl_context),
             input: Input::new(sdl_context),
             done: false,
             waiting_for_key: false,
@@ -67,12 +71,8 @@ impl VirtualMachine {
                     self.waiting_for_key = false;
                 }
             } else {
-                if self.delay_timer > 0 {
-                    self.delay_timer -= 1
-                }
-                if self.sound_timer > 0 {
-                    self.sound_timer -= 1
-                }
+                self.delay_timer.tick();
+                self.sound_timer.tick();
 
                 let word = self.fetch();
                 let decode_result = decode(word);
@@ -84,6 +84,12 @@ impl VirtualMachine {
                 };
 
                 self.graphics.render();
+
+                if self.sound_timer.get_value() > 0 {
+                    self.audio.start_beep();
+                } else {
+                    self.audio.stop_beep();
+                }
 
                 if self.done {
                     break;
@@ -256,7 +262,7 @@ impl VirtualMachine {
                 };
             }
             Instruction::LoadDelayTimerVx { vx } => {
-                self.registers[vx as usize] = self.delay_timer;
+                self.registers[vx as usize] = self.delay_timer.get_value();
                 self.inc_pc();
             }
             Instruction::LoadKeyVx { vx } => {
@@ -265,11 +271,11 @@ impl VirtualMachine {
                 self.inc_pc();
             }
             Instruction::SetDelayTimerVx { vx } => {
-                self.delay_timer = self.registers[vx as usize];
+                self.delay_timer.set_value(self.registers[vx as usize]);
                 self.inc_pc();
             }
             Instruction::SetSoundTimerVx { vx } => {
-                self.sound_timer = self.registers[vx as usize];
+                self.sound_timer.set_value(self.registers[vx as usize]);
                 self.inc_pc();
             }
             Instruction::AddIVx { vx } => {

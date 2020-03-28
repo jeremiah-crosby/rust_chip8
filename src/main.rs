@@ -1,8 +1,10 @@
 extern crate sdl2;
 
+mod audio;
 mod graphics;
 mod input;
 mod instruction;
+mod timer;
 mod types;
 mod util;
 mod vm;
