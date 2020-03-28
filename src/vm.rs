@@ -90,10 +90,10 @@ impl VirtualMachine {
                 } else {
                     self.audio.stop_beep();
                 }
+            }
 
-                if self.done {
-                    break;
-                }
+            if self.done {
+                break;
             }
         }
     }
