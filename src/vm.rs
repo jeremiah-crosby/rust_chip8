@@ -24,6 +24,7 @@ pub struct VirtualMachine {
     pc: Word,
     sound_timer: Timer,
     delay_timer: Timer,
+    cpu_timer: Timer,
     stack: Vec<u16>,
     stack_pointer: Word,
     rng: ThreadRng,
@@ -43,8 +44,9 @@ impl VirtualMachine {
             registers: vec![0; 16],
             index: 0,
             pc: ROM_START as u16,
-            delay_timer: Timer::new(),
-            sound_timer: Timer::new(),
+            delay_timer: Timer::new(60),
+            sound_timer: Timer::new(60),
+            cpu_timer: Timer::new(540),
             stack: vec![0; 16],
             stack_pointer: 0,
             rng: thread_rng(),
@@ -66,27 +68,36 @@ impl VirtualMachine {
         self.load_rom(&rom_path);
 
         loop {
+            self.cpu_timer.tick();
             self.should_draw = false;
             self.handle_events();
-            if self.waiting_for_key {
-                self.check_key_press();
-            } else {
-                self.update_timers();
-                self.run_next_instruction();
 
-                if self.should_draw {
-                    self.graphics.render();
-                }
-
-                if self.sound_timer.get_value() > 0 {
-                    self.audio.start_beep();
-                } else {
-                    self.audio.stop_beep();
-                }
+            if self.cpu_timer.get_value() == 0 {
+                self.one_cycle();
+                self.cpu_timer.set_value(1);
             }
 
             if self.done {
                 break;
+            }
+        }
+    }
+
+    fn one_cycle(&mut self) {
+        if self.waiting_for_key {
+            self.check_key_press();
+        } else {
+            self.update_timers();
+            self.run_next_instruction();
+
+            if self.should_draw {
+                self.graphics.render();
+            }
+
+            if self.sound_timer.get_value() > 0 {
+                self.audio.start_beep();
+            } else {
+                self.audio.stop_beep();
             }
         }
     }
