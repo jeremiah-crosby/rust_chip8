@@ -69,24 +69,10 @@ impl VirtualMachine {
             self.should_draw = false;
             self.handle_events();
             if self.waiting_for_key {
-                if let Some(i) = self.input.get_first_pressed_key() {
-                    self.registers[self.key_register as usize] = i as u8;
-                    self.waiting_for_key = false;
-                }
+                self.check_key_press();
             } else {
-                self.delay_timer.tick();
-                self.sound_timer.tick();
-
-                let word = self.fetch();
-                let decode_result = decode(word);
-                match decode_result {
-                    Ok(instruction) => {
-                        self.execute(instruction);
-                    }
-                    Err(err) => {
-                        println!("Error decoding instruction: {:?}", err);
-                    }
-                };
+                self.update_timers();
+                self.run_next_instruction();
 
                 if self.should_draw {
                     self.graphics.render();
@@ -103,6 +89,31 @@ impl VirtualMachine {
                 break;
             }
         }
+    }
+
+    fn check_key_press(&mut self) {
+        if let Some(i) = self.input.get_first_pressed_key() {
+            self.registers[self.key_register as usize] = i as u8;
+            self.waiting_for_key = false;
+        }
+    }
+
+    fn run_next_instruction(&mut self) {
+        let word = self.fetch();
+        let decode_result = decode(word);
+        match decode_result {
+            Ok(instruction) => {
+                self.execute(instruction);
+            }
+            Err(err) => {
+                println!("Error decoding instruction: {:?}", err);
+            }
+        };
+    }
+
+    fn update_timers(&mut self) {
+        self.delay_timer.tick();
+        self.sound_timer.tick();
     }
 
     fn load_rom(&mut self, rom_path: &String) {
