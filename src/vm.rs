@@ -33,6 +33,7 @@ pub struct VirtualMachine {
     done: bool,
     waiting_for_key: bool,
     key_register: u8,
+    should_draw: bool,
 }
 
 impl VirtualMachine {
@@ -53,6 +54,7 @@ impl VirtualMachine {
             done: false,
             waiting_for_key: false,
             key_register: 0,
+            should_draw: false,
         }
     }
 
@@ -64,6 +66,7 @@ impl VirtualMachine {
         self.load_rom(&rom_path);
 
         loop {
+            self.should_draw = false;
             self.handle_events();
             if self.waiting_for_key {
                 if let Some(i) = self.input.get_first_pressed_key() {
@@ -83,7 +86,9 @@ impl VirtualMachine {
                     Err(err) => {}
                 };
 
-                self.graphics.render();
+                if self.should_draw {
+                    self.graphics.render();
+                }
 
                 if self.sound_timer.get_value() > 0 {
                     self.audio.start_beep();
@@ -125,6 +130,7 @@ impl VirtualMachine {
             Instruction::Cls => {
                 self.graphics.clear();
                 self.inc_pc();
+                self.should_draw = true;
             }
             Instruction::Ret => {
                 self.stack_pointer -= 1;
@@ -246,6 +252,7 @@ impl VirtualMachine {
                 let collision = self.graphics.draw_sprite(x, y, sprite_bytes);
                 self.registers[0xf] = if collision { 1 } else { 0 };
                 self.inc_pc();
+                self.should_draw = true;
             }
             Instruction::SkipPressedVx { vx } => {
                 self.pc += if self.input.is_pressed(self.registers[vx as usize] as usize) {
