@@ -83,7 +83,9 @@ impl VirtualMachine {
                     Ok(instruction) => {
                         self.execute(instruction);
                     }
-                    Err(err) => {}
+                    Err(err) => {
+                        println!("Error decoding instruction: {:?}", err);
+                    }
                 };
 
                 if self.should_draw {

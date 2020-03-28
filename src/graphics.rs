@@ -66,7 +66,8 @@ impl Graphics {
                 };
                 self.canvas.set_draw_color(color);
                 self.canvas
-                    .draw_point(sdl2::rect::Point::new(x as i32, y as i32));
+                    .draw_point(sdl2::rect::Point::new(x as i32, y as i32))
+                    .expect("Could not draw point");
             }
         }
         self.canvas.present();

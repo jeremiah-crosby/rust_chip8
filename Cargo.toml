@@ -9,5 +9,8 @@ edition = "2018"
 [dependencies]
 snafu = "0.6.3"
 rand = "0.7.3"
-sdl2 = "0.33"
 bitvec = "0.17.3"
+
+[dependencies.sdl2]
+version = "0.33"
+features = ["bundled"]

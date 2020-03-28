@@ -331,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn decode_ld_I_from_addr() {
+    fn decode_ld_i_from_addr() {
         let decoded = decode(0xa456);
         assert_eq!(
             decoded.unwrap(),
